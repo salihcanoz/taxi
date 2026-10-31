@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taxi Ritprijs Calculator</title>
+<style>
+  /* Theme colours taken from the Taxibedrijf Abdi logo */
+  :root {
+    --yellow: #febb1b;
+    --orange: #ff8400;
+    --black: #1a1a1a;
+    --yellow-soft: #fff6e0;
+    --line: #e4ded0;
+    --focus: rgba(255,132,0,.25);
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+    background: var(--yellow-soft);
+    color: var(--black);
+    display: flex;
+    justify-content: center;
+    padding: 40px 16px;
+    margin: 0;
+  }
+  .calc {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    background: #fff;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 380px;
+    padding: 24px;
+    box-shadow: 0 4px 20px rgba(0,0,0,.08);
+  }
+  h1 { margin: 0; font-size: 22px; }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: #f3eee2;
+    border-radius: 8px;
+    padding: 4px;
+  }
+  .tab {
+    flex: 1 1 0;
+    border: none;
+    background: transparent;
+    font: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    padding: 8px;
+    border-radius: 6px;
+    color: #666;
+    cursor: pointer;
+  }
+  .tab {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+  }
+  .tab .icon { stroke: currentColor; }
+  .tab[aria-selected="true"] .icon { stroke: var(--black); }
+  .tab[aria-selected="true"] {
+    background: var(--yellow);
+    color: var(--black);
+    box-shadow: 0 1px 3px rgba(0,0,0,.1);
+  }
+
+  .panel {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  .panel[hidden] { display: none; }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .field-row {
+    display: flex;
+    gap: 12px;
+  }
+  .field-row .field { flex: 1 1 0; min-width: 0; }
+
+  label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #444;
+  }
+  .icon {
+    flex: 0 0 18px;
+    width: 18px;
+    height: 18px;
+    stroke: var(--orange);
+    fill: none;
+    stroke-width: 2;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  input {
+    width: 100%;
+    font: inherit;
+    font-size: 16px;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    transition: border-color .15s, box-shadow .15s;
+  }
+  input:focus {
+    outline: none;
+    border-color: var(--orange);
+    box-shadow: 0 0 0 3px var(--focus);
+  }
+
+  .total {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 8px;
+    padding: 16px;
+    border-radius: 10px;
+    background: var(--black);
+    color: #fff;
+  }
+  .total span { font-size: 16px; font-weight: 600; }
+  .total output { color: var(--yellow); font-size: 26px; font-weight: 700; white-space: nowrap; }
+
+  .reset {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    font: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    padding: 12px;
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    background: #fff;
+    color: #444;
+    cursor: pointer;
+  }
+  .reset:hover { background: var(--yellow-soft); border-color: var(--orange); }
+  .reset:focus-visible { outline: none; box-shadow: 0 0 0 3px var(--focus); }
+
+  .logo {
+    display: flex;
+    justify-content: center;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
+  }
+  .logo img { width: 100%; max-width: 240px; height: auto; }
+
+  .hint { margin: 0; font-size: 13px; color: #888; }
+</style>
+</head>
+<body>
+  <!-- Icon sprite (Lucide icons, ISC license) -->
+  <svg width="0" height="0" style="position:absolute" aria-hidden="true">
+    <symbol id="i-route" viewBox="0 0 24 24"><circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></symbol>
+    <symbol id="i-euro" viewBox="0 0 24 24"><path d="M4 10h12"/><path d="M4 14h9"/><path d="M19 6a7.7 7.7 0 0 0-5.2-2A7.9 7.9 0 0 0 6 12c0 4.4 3.5 8 7.8 8 2 0 3.8-.8 5.2-2"/></symbol>
+    <symbol id="i-percent" viewBox="0 0 24 24"><line x1="19" x2="5" y1="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></symbol>
+    <symbol id="i-flag" viewBox="0 0 24 24"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></symbol>
+    <symbol id="i-car" viewBox="0 0 24 24"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></symbol>
+    <symbol id="i-timer" viewBox="0 0 24 24"><line x1="10" x2="14" y1="2" y2="2"/><line x1="12" x2="15" y1="14" y2="11"/><circle cx="12" cy="14" r="8"/></symbol>
+    <symbol id="i-navigation" viewBox="0 0 24 24"><polygon points="3 11 22 2 13 21 11 13 3 11"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+  </svg>
+
+  <form class="calc" id="calc" autocomplete="off">
+    <h1>Taxi ritprijs</h1>
+
+    <div class="tabs" role="tablist">
+      <button type="button" class="tab" role="tab" id="tab-rit" aria-controls="panel-rit" aria-selected="true"><svg class="icon" aria-hidden="true"><use href="#i-navigation"/></svg>Rit</button>
+      <button type="button" class="tab" role="tab" id="tab-instellingen" aria-controls="panel-instellingen" aria-selected="false"><svg class="icon" aria-hidden="true"><use href="#i-settings"/></svg>Instellingen</button>
+    </div>
+
+    <div class="panel" id="panel-rit" role="tabpanel" aria-labelledby="tab-rit">
+      <div class="field-row">
+        <div class="field">
+          <label for="afstand"><svg class="icon" aria-hidden="true"><use href="#i-route"/></svg>Afstand (km)</label>
+          <input id="afstand" inputmode="decimal" placeholder="0" value="10">
+        </div>
+        <div class="field">
+          <label for="min"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>Tijd (min)</label>
+          <input id="min" inputmode="decimal" placeholder="0" value="0">
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label for="kortingEur"><svg class="icon" aria-hidden="true"><use href="#i-euro"/></svg>Korting</label>
+          <input id="kortingEur" inputmode="decimal" placeholder="0" value="0">
+        </div>
+        <div class="field">
+          <label for="kortingPct"><svg class="icon" aria-hidden="true"><use href="#i-percent"/></svg>Korting</label>
+          <input id="kortingPct" inputmode="decimal" placeholder="0" value="0">
+        </div>
+      </div>
+
+      <div class="total">
+        <span>Ritprijs</span>
+        <output id="prijs" for="afstand min kortingEur kortingPct">€ 0.00</output>
+      </div>
+
+      <button type="button" class="reset" id="reset"><svg class="icon" aria-hidden="true"><use href="#i-reset"/></svg>Nieuwe rit</button>
+    </div>
+
+    <div class="panel" id="panel-instellingen" role="tabpanel" aria-labelledby="tab-instellingen" hidden>
+      <div class="field">
+        <label for="start"><svg class="icon" aria-hidden="true"><use href="#i-flag"/></svg>Start tarief (€)</label>
+        <input id="start" inputmode="decimal" value="4,31">
+      </div>
+      <div class="field">
+        <label for="km"><svg class="icon" aria-hidden="true"><use href="#i-car"/></svg>Km tarief (€ per km)</label>
+        <input id="km" inputmode="decimal" value="3,17">
+      </div>
+      <div class="field">
+        <label for="tijd"><svg class="icon" aria-hidden="true"><use href="#i-timer"/></svg>Tijd tarief (€ per min)</label>
+        <input id="tijd" inputmode="decimal" value="0,52">
+      </div>
+      <p class="hint">Tarieven worden automatisch opgeslagen.</p>
+    </div>
+
+    <footer class="logo">
+      <img src="logo.svg" alt="Taxibedrijf Abdi">
+    </footer>
+  </form>
+
+<script>
+  const $ = id => document.getElementById(id);
+  const SETTINGS = ['start', 'km', 'tijd'];
+
+  // Accept both "4,31" and "4.31"
+  const num = id => {
+    const v = parseFloat($(id).value.replace(',', '.'));
+    return isNaN(v) ? 0 : v;
+  };
+
+  function bereken() {
+    const subtotaal = num('start') + num('km') * num('afstand') + num('tijd') * num('min');
+    const naPct = subtotaal * (1 - num('kortingPct') / 100);
+    const prijs = Math.max(0, naPct - num('kortingEur'));
+    $('prijs').textContent = '€ ' + prijs.toFixed(2);
+  }
+
+  // Tabs
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => {
+        const active = t === tab;
+        t.setAttribute('aria-selected', active);
+        $(t.getAttribute('aria-controls')).hidden = !active;
+      });
+    });
+  });
+
+  // Remember settings between visits
+  SETTINGS.forEach(id => {
+    const saved = localStorage.getItem('taxi-' + id);
+    if (saved !== null) $(id).value = saved;
+    $(id).addEventListener('input', () => localStorage.setItem('taxi-' + id, $(id).value));
+  });
+
+  // Clear the ride fields; rates stay as they are
+  const RIT = ['afstand', 'min', 'kortingEur', 'kortingPct'];
+  $('reset').addEventListener('click', () => {
+    RIT.forEach(id => $(id).value = '');
+    bereken();
+    $('afstand').focus();
+  });
+
+  $('calc').addEventListener('input', bereken);
+  $('calc').addEventListener('submit', e => e.preventDefault());
+  bereken();
+</script>
+</body>
+</html>
