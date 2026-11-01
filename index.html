@@ -169,6 +169,23 @@
   .logo img { width: 100%; max-width: 240px; height: auto; }
 
   .hint { margin: 0; font-size: 13px; color: #888; }
+
+  input[aria-invalid="true"] { border-color: #d93025; }
+  input[aria-invalid="true"]:focus { box-shadow: 0 0 0 3px rgba(217,48,37,.2); }
+  .input-wrap { position: relative; }
+  .input-wrap input { padding-right: 76px; }
+  .input-wrap .bedrag {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 13px;
+    color: #888;
+    pointer-events: none;
+    white-space: nowrap;
+  }
+  .error { margin: 0; font-size: 12px; color: #d93025; }
+  .error:empty { display: none; }
 </style>
 </head>
 <body>
@@ -198,27 +215,40 @@
       <div class="field-row">
         <div class="field">
           <label for="afstand"><svg class="icon" aria-hidden="true"><use href="#i-route"/></svg>Afstand (km)</label>
-          <input id="afstand" inputmode="decimal" placeholder="0" value="0">
+          <div class="input-wrap">
+            <input id="afstand" inputmode="decimal" placeholder="0" value="0" aria-describedby="afstand-bedrag afstand-err">
+            <span class="bedrag" id="afstand-bedrag"></span>
+          </div>
+          <p class="error" id="afstand-err" aria-live="polite"></p>
         </div>
         <div class="field">
           <label for="min"><svg class="icon" aria-hidden="true"><use href="#i-clock"/></svg>Tijd (min)</label>
-          <input id="min" inputmode="decimal" placeholder="0" value="0">
+          <div class="input-wrap">
+            <input id="min" inputmode="decimal" placeholder="0" value="0" aria-describedby="min-bedrag min-err">
+            <span class="bedrag" id="min-bedrag"></span>
+          </div>
+          <p class="error" id="min-err" aria-live="polite"></p>
         </div>
       </div>
       <div class="field-row">
         <div class="field">
           <label for="kortingEur"><svg class="icon" aria-hidden="true"><use href="#i-euro"/></svg>Korting</label>
-          <input id="kortingEur" inputmode="decimal" placeholder="0" value="0">
+          <input id="kortingEur" inputmode="decimal" placeholder="0" value="0" aria-describedby="kortingEur-err">
+          <p class="error" id="kortingEur-err" aria-live="polite"></p>
         </div>
         <div class="field">
           <label for="kortingPct"><svg class="icon" aria-hidden="true"><use href="#i-percent"/></svg>Korting</label>
-          <input id="kortingPct" inputmode="decimal" placeholder="0" value="0">
+          <div class="input-wrap">
+            <input id="kortingPct" inputmode="decimal" placeholder="0" value="0" aria-describedby="kortingPct-bedrag kortingPct-err">
+            <span class="bedrag" id="kortingPct-bedrag"></span>
+          </div>
+          <p class="error" id="kortingPct-err" aria-live="polite"></p>
         </div>
       </div>
 
       <div class="total">
         <span>Ritprijs</span>
-        <output id="prijs" for="afstand min kortingEur kortingPct">€ 0.00</output>
+        <output id="prijs" for="afstand min kortingEur kortingPct">€ 0,00</output>
       </div>
 
       <button type="button" class="reset" id="reset"><svg class="icon" aria-hidden="true"><use href="#i-reset"/></svg>Nieuwe rit</button>
@@ -255,11 +285,39 @@
     return isNaN(v) ? 0 : v;
   };
 
+  // Validate a ride field: numeric, between 0 and max. Empty counts as 0.
+  // Dutch notation everywhere: decimal comma
+  const getal = n => String(Math.round(n * 100) / 100).replace('.', ',');
+  const euro = n => '€ ' + n.toFixed(2).replace('.', ',');
+  function check(id, max, fmt = getal) {
+    const raw = $(id).value.trim();
+    let msg = '';
+    if (raw !== '' && !/^-?(\d+([.,]\d*)?|[.,]\d+)$/.test(raw)) msg = 'Voer een geldig getal in';
+    else if (num(id) < 0) msg = 'Minimaal 0';
+    else if (num(id) > max) msg = 'Maximaal ' + fmt(max);
+    $(id).setAttribute('aria-invalid', msg !== '');
+    $(id + '-err').textContent = msg;
+    return msg === '';
+  }
+
   function bereken() {
     const subtotaal = num('start') + num('km') * num('afstand') + num('tijd') * num('min');
     const naPct = subtotaal * (1 - num('kortingPct') / 100);
+    const ok = [
+      check('afstand', 999),
+      check('min', 999),
+      check('kortingPct', 100),
+      check('kortingEur', Math.max(0, naPct), euro)
+    ].every(Boolean);
     const prijs = Math.max(0, naPct - num('kortingEur'));
-    $('prijs').textContent = '€ ' + prijs.toFixed(2);
+
+    // Show what each input adds to (or takes off) the price
+    const toon = (id, bedrag, valid, sign = '') =>
+      $(id + '-bedrag').textContent = valid && bedrag > 0 ? sign + euro(bedrag) : '';
+    toon('afstand', num('km') * num('afstand'), ok);
+    toon('min', num('tijd') * num('min'), ok);
+    toon('kortingPct', subtotaal - naPct, ok, '− ');
+    $('prijs').textContent = ok ? euro(prijs) : '€ –';
   }
 
   // Tabs
